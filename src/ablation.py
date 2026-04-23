@@ -11,7 +11,7 @@ Usage:
     python -m src.ablation \
         --data-root ./data/cifake \
         --out-root ./runs/ablation \
-        --epochs 5 --batch-size 64
+        --epochs 3 --batch-size 64
 """
 
 from __future__ import annotations

@@ -10,16 +10,16 @@ Two CLIs in one file:
 
       python -m src.eval cifake \
           --data-root ./data/cifake \
-          --checkpoint ./runs/ablation/screenshot_jitter_crop/best.pt \
-          --out ./runs/ablation/screenshot_jitter_crop/test_report.json
+          --checkpoint ./runs/ablation/screenshot_jitter/best.pt \
+          --out ./runs/ablation/screenshot_jitter/test_report.json
 
   (2) Real-world (Instagram) evaluation on a folder of user-provided images
       organized as real_world/REAL and real_world/FAKE:
 
       python -m src.eval realworld \
           --data-root ./data/real_world \
-          --checkpoint ./runs/ablation/screenshot_jitter_crop/best.pt \
-          --out ./runs/ablation/screenshot_jitter_crop/realworld_report.json
+          --checkpoint ./runs/ablation/screenshot_jitter/best.pt \
+          --out ./runs/ablation/screenshot_jitter/realworld_report.json
 """
 
 from __future__ import annotations

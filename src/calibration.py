@@ -10,8 +10,8 @@ industry-standard baseline calibrator from Guo et al. 2017.
 Usage:
     python -m src.calibration \
         --data-root ./data/cifake \
-        --checkpoint ./runs/ablation/screenshot_jitter_crop/best.pt \
-        --out ./runs/ablation/screenshot_jitter_crop/calibration.json
+        --checkpoint ./runs/ablation/screenshot_jitter/best.pt \
+        --out ./runs/ablation/screenshot_jitter/calibration.json
 """
 
 from __future__ import annotations

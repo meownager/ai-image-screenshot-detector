@@ -14,6 +14,14 @@ data/real_world/
 *.pth
 *.onnx
 
+# Personal Colab backup (executed notebook with outputs from old 5-epoch run)
+# Kept locally as a personal artifact; not pushed to GitHub.
+Colab/
+
+# The unzipped Instagram dataset is tracked at data/ig-data/. The zip is a
+# personal local copy and exceeds GitHub's 100 MB single-file limit.
+data/ig-data.zip
+
 # Notebook checkpoints
 .ipynb_checkpoints/
 

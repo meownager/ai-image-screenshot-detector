@@ -1,11 +1,9 @@
 """
 app.py
 
-Gradio interface for the screenshot-robust AI-image detector (CP2 Snippet 2).
-
-Entry point for Hugging Face Spaces. The Space's app.py should simply
-`from src.app import demo; demo.launch()`, or this file can be used directly
-as the Space root (see README for both layouts).
+Gradio interface for the screenshot-robust AI-image detector.
+Deployed on Hugging Face Spaces as the course product prototype for
+ECE 57000 (Spring 2026, Purdue).
 
 Guardrails enforced in predict():
   * File-size limit (10 MB).
@@ -19,29 +17,43 @@ from __future__ import annotations
 import io
 import json
 import os
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import gradio as gr
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
-from torchvision import transforms
-
-from .train import build_model, IMAGENET_MEAN, IMAGENET_STD
+from torchvision import models, transforms
 
 
 # ---------------------------------------------------------------------------
-# Model loading
+# Model definition (inlined so the Space is self-contained)
 # ---------------------------------------------------------------------------
 
-DEFAULT_CHECKPOINT = os.environ.get(
-    "DETECTOR_CHECKPOINT", "runs/ablation/screenshot_jitter/best.pt"
-)
-DEFAULT_CALIBRATION = os.environ.get(
-    "DETECTOR_CALIBRATION", "runs/ablation/screenshot_jitter/calibration.json"
-)
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD = [0.229, 0.224, 0.225]
+
+
+def build_model() -> nn.Module:
+    """EfficientNet-B0 pretrained on ImageNet, with a 2-class head."""
+    try:
+        weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1
+        model = models.efficientnet_b0(weights=weights)
+    except AttributeError:
+        model = models.efficientnet_b0(pretrained=True)
+    in_features = model.classifier[1].in_features
+    model.classifier[1] = nn.Linear(in_features, 2)
+    return model
+
+
+# ---------------------------------------------------------------------------
+# Loading
+# ---------------------------------------------------------------------------
+
+CHECKPOINT_PATH = os.environ.get("DETECTOR_CHECKPOINT", "best.pt")
+CALIBRATION_PATH = os.environ.get("DETECTOR_CALIBRATION", "calibration.json")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 CLASS_NAMES = ["Real", "AI-Generated"]
@@ -50,15 +62,15 @@ MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
 MIN_DIM, MAX_DIM = 32, 4096
 
 
-def _load_model(checkpoint_path: str) -> torch.nn.Module:
-    model = build_model(freeze_backbone=False)
+def _load_model(checkpoint_path: str) -> nn.Module:
+    model = build_model()
     if os.path.exists(checkpoint_path):
         state = torch.load(checkpoint_path, map_location=DEVICE)
         state_dict = state.get("model_state", state) if isinstance(state, dict) else state
         model.load_state_dict(state_dict)
+        print(f"[info] loaded checkpoint from {checkpoint_path}")
     else:
-        print(f"[warning] checkpoint not found at {checkpoint_path}; "
-              "serving an untrained model. This is expected before the first training run.")
+        print(f"[warning] checkpoint not found at {checkpoint_path}; serving untrained model.")
     model.to(DEVICE).eval()
     return model
 
@@ -70,9 +82,8 @@ def _load_temperature(calibration_path: str) -> float:
     return 1.0
 
 
-_MODEL = _load_model(DEFAULT_CHECKPOINT)
-_TEMPERATURE = _load_temperature(DEFAULT_CALIBRATION)
-
+_MODEL = _load_model(CHECKPOINT_PATH)
+_TEMPERATURE = _load_temperature(CALIBRATION_PATH)
 
 _eval_transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -96,16 +107,11 @@ def _validate(img: Optional[Image.Image]) -> Optional[str]:
     buf = io.BytesIO()
     img.convert("RGB").save(buf, format="PNG")
     if buf.tell() > MAX_FILE_BYTES:
-        return f"Image file exceeds the {MAX_FILE_BYTES // (1024*1024)} MB limit."
+        return f"Image exceeds the {MAX_FILE_BYTES // (1024*1024)} MB limit."
     return None
 
 
 def predict(image: Optional[Image.Image]) -> Tuple[Dict[str, float], str]:
-    """Run inference on a PIL image.
-
-    Returns a dict of {class_name: probability} for Gradio's Label component
-    and a human-readable explanation string.
-    """
     err = _validate(image)
     if err is not None:
         return {"Real": 0.0, "AI-Generated": 0.0}, f"[input error] {err}"
@@ -133,10 +139,10 @@ def predict(image: Optional[Image.Image]) -> Tuple[Dict[str, float], str]:
         band = "High" if pred_conf >= 0.80 else "Medium"
         explanation = (
             f"Verdict: {verdict} ({band.lower()} confidence, {pred_conf:.0%}). "
-            f"The detector was trained on CIFAKE + Stable Diffusion outputs with "
-            f"screenshot-style augmentation; it generalizes best to images that "
-            f"match those distributions. Out-of-distribution generators "
-            f"(Midjourney v6, Flux, Sora) may not be reliably classified."
+            "The detector was trained on CIFAKE + Stable Diffusion outputs with "
+            "screenshot-style augmentation; it generalizes best to images that "
+            "match those distributions. Out-of-distribution generators "
+            "(Midjourney v6, Flux, Sora) may not be reliably classified."
         )
 
     return (
@@ -152,19 +158,19 @@ def predict(image: Optional[Image.Image]) -> Tuple[Dict[str, float], str]:
 DESCRIPTION = """
 # AI Image Detector (Screenshot-Robust)
 
-Upload an image - including a screenshot of a social-media post - and the model
+Upload an image (including a screenshot of a social-media post) and the model
 will estimate whether it is **AI-generated** or **real**.
 
-**Method:** EfficientNet-B0 fine-tuned on CIFAKE + a Stable Diffusion subset of
-GenImage, with a custom `simulate_screenshot` augmentation (JPEG compression,
-downscale/upscale, Gaussian blur) plus color jitter and random resized crops.
-Outputs are calibrated with temperature scaling; low-confidence predictions
-are surfaced as *Uncertain* rather than forced into a binary label.
+**Method:** EfficientNet-B0 fine-tuned on CIFAKE + a Stable Diffusion subset
+of GenImage, with a custom `simulate_screenshot` augmentation (JPEG
+compression, downscale/upscale, Gaussian blur) plus color jitter. Outputs
+are calibrated with temperature scaling; low-confidence predictions are
+surfaced as *Uncertain* rather than forced into a binary label.
 
 **Limitations:** trained only against Stable Diffusion v1.4-class generators;
-may behave unpredictably on Midjourney v6, Flux, Sora, and other out-of-distribution
-sources. This is a research prototype for coursework (ECE 57000 at Purdue),
-not a production content-authenticity tool.
+may behave unpredictably on Midjourney v6, Flux, Sora, and other
+out-of-distribution sources. Research prototype for coursework (ECE 57000
+at Purdue); not a production content-authenticity tool.
 """
 
 

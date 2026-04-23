@@ -50,8 +50,8 @@ The notebook saves results to:
 
 - `./runs/ablation/*/best.pt` — model checkpoints
 - `./runs/ablation/results.json` — ablation table
-- `./runs/ablation/screenshot_jitter_crop/test_report.json` — test metrics
-- `./runs/ablation/screenshot_jitter_crop/calibration.json` — temperature scaling
+- `./runs/ablation/screenshot_jitter/test_report.json` — test metrics
+- `./runs/ablation/screenshot_jitter/calibration.json` — temperature scaling
 
 And, if you mounted Drive, copies all of that to `/content/drive/MyDrive/ece57000_ai_screenshot_detector/runs/`.
 

@@ -7,9 +7,9 @@ full training loop wrapped around it).
 Usage (single run):
     python -m src.train \
         --data-root ./data/cifake \
-        --out-dir ./runs/efficientnet_screenshot_jitter_crop \
-        --aug screenshot_jitter_crop \
-        --epochs 5 --batch-size 64 --lr 3e-4
+        --out-dir ./runs/efficientnet_screenshot_jitter \
+        --aug screenshot_jitter \
+        --epochs 3 --batch-size 64 --lr 3e-4
 
 The four supported --aug values are documented in src.ablation.AUG_CONFIGS.
 """
@@ -238,9 +238,9 @@ def _parse_args():
     p.add_argument("--data-root", required=True,
                    help="Path to CIFAKE-style dataset (train/REAL, train/FAKE, test/REAL, test/FAKE).")
     p.add_argument("--out-dir", required=True)
-    p.add_argument("--aug", default="screenshot_jitter_crop",
+    p.add_argument("--aug", default="screenshot_jitter",
                    choices=["none", "screenshot", "screenshot_jitter", "screenshot_jitter_crop"])
-    p.add_argument("--epochs", type=int, default=5)
+    p.add_argument("--epochs", type=int, default=3)
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--weight-decay", type=float, default=1e-4)
