@@ -43,3 +43,8 @@ paper/*.blg
 paper/*.synctex.gz
 paper/*.fdb_latexmk
 paper/*.fls
+
+# Personal prep documents (presentation notes, Q&A drills) — local only
+SPEECH.md
+QA_PREP.md
+ECE57000_Presentation_Monowara.pptx
